@@ -1,0 +1,159 @@
+# 1. OVERVIEW
+ABAP structures are DDIC objects that hold related fields together without database persistence.
+They can be used in reports, ALV outputs, interfaces, or as components of tables and CDS views.
+
+# 2. STRUCTURE NAMING CONVENTIONS
+IF name not provided in document then,
+| Type | Prefix Example | Description |
+|------|----------------|--------------|
+| Standalone Structure | `ZSTR_` | Custom reusable structure |
+| Include Structure | `ZINC_` | Used for inclusion in other DDIC objects |
+| Append Structure | `ZAPP_` | Used to extend SAP standard structures/tables |
+
+Rules:
+- Names must begin with `Z`.
+- All field names in uppercase.
+- Use standard data elements where possible.
+
+# 3. STANDALONE STRUCTURE EXAMPLE
+@EndUserText.label : 'Structure for Purchase Order Closure Details'
+@AbapCatalog.enhancementCategory : #NOT_EXTENSIBLE
+define structure ZSTR_PO_CLOSE {
+
+  EBELN : EBELN;
+
+  EBELP : EBELP;
+
+  MATNR : MATNR;
+
+  LIFNR : LIFNR;
+
+  MENGE : MENGE_D;
+
+  OPEN_QTY : MENGE_D;
+
+  AEDAT : AEDAT;
+
+  FLAG_CLOSE : CHAR1;
+}
+
+# 4. INCLUDE STRUCTURE (ZINC_)
+@EndUserText.label : 'Include Structure for Audit Fields'
+@AbapCatalog.enhancementCategory : #NOT_EXTENSIBLE
+define structure ZINC_AUDIT_FIELDS {
+
+  ERNAM : ERNAM;
+
+  ERDAT : ERDAT;
+
+  AENAM : AENAM;
+
+  AEDAT : AEDAT;
+}
+
+# 5. APPEND STRUCTURE (ZAPP_)
+@EndUserText.label : 'Append Structure for Customer Fields in EKKO'
+@AbapCatalog.enhancementCategory : #EXTENSIBLE_UNDERLYING
+append structure ZAPP_EKKO_CUSTOMER_FIELDS to EKKO {
+
+  ZZCUST_REF : CHAR20;
+
+  ZZBU_UNIT : CHAR10;
+
+  ZZNOTE : CHAR100;
+}
+
+# 6. STRUCTURE CREATION RULES
+- Use `define structure` for standalone and include structures.
+- Use `append structure ... to ...` for append structures.
+- Apply `@AbapCatalog.enhancementCategory` annotation:
+  - `#NOT_EXTENSIBLE` for standalone and include structures.
+  - `#EXTENSIBLE_UNDERLYING` for append structures.
+- Data elements should come from standard SAP dictionary if applicable.
+- If the data element is not available, use domain-like types (`CHAR10`, `NUMC8`, `DEC(13,2)` etc.) with a short label.
+- Use uppercase field names and meaningful identifiers.
+- Maintain consistent indentation and alignment.
+
+# 7. USAGE CONTEXT GUIDELINES
+- **Standalone Structure:** When requirement describes a logical record, entity, or grouping of fields (e.g., "Purchase Order Details", "Employee Summary").
+- **Include Structure:** When the same fields are to be reused across multiple tables or structures (e.g., "Audit Fields", "Header Info").
+- **Append Structure:** When requirement mentions adding customer or extension fields to an existing SAP table or structure (e.g., "Add custom fields to EKKO").
+
+# 8. NAMING BEST PRACTICES
+- Use descriptive suffixes:
+  - `_HDR` for header-level fields
+  - `_ITM` for item-level structures
+  - `_EXT` for extension structures
+- Example: `ZSTR_SALES_HDR`, `ZINC_AUDIT_FIELDS`, `ZAPP_EKKO_EXT`
+- Avoid numbers or special characters in object names.
+- Keep total length ≤ 30 characters.
+
+# 9. INCLUDING A STRUCTURE INSIDE ANOTHER STRUCTURE
+When a main structure needs to reuse fields from another include structure, use the `INCLUDE STRUCTURE` statement inside the `define structure` block.
+
+Example:
+@EndUserText.label : 'Structure for Purchase Order with Audit Info'
+@AbapCatalog.enhancementCategory : #NOT_EXTENSIBLE
+define structure ZSTR_PO_AUDIT {
+
+  INCLUDE STRUCTURE ZSTR_PO_CLOSE;
+  INCLUDE STRUCTURE ZINC_AUDIT_FIELDS;
+
+  STATUS : CHAR1;
+}
+
+Guidelines:
+- Include structures are inserted inline — all fields become part of the main structure.
+- Only use include structures that have consistent enhancement categories.
+- Use `INCLUDE STRUCTURE` inside `define structure { ... }` for clean hierarchical composition.
+- Do not mix append structures directly inside `define structure`.
+
+# 10. APPENDING A STRUCTURE INSIDE ANOTHER STRUCTURE
+In rare scenarios where customer extensions are required to be part of an existing structure (e.g., extending a standard or custom one), use an **append structure**.
+
+Example:
+@EndUserText.label : 'Append Structure for PO Audit Extension'
+@AbapCatalog.enhancementCategory : #EXTENSIBLE_UNDERLYING
+append structure ZAPP_PO_AUDIT_EXT to ZSTR_PO_AUDIT {
+
+  ZZUSER_NOTE : CHAR200;
+
+  ZZAPPROVED : CHAR1;
+}
+
+Guidelines:
+- Use `append structure ... to ...` only when extending an existing structure.
+- Append structures cannot redefine or duplicate existing fields.
+- Follow customer naming convention: fields prefixed with `ZZ` or `YY`.
+- Enhancement category should match the parent structure.
+
+# 11. STRUCTURE WITH CURRENCY AND QUANTITY FIELDS
+
+When a structure involves monetary amounts or quantities, use semantic annotations to define currency and unit of measure relationships clearly.
+This ensures that CDS views, OData, and Fiori apps correctly interpret the numeric fields with their references.
+
+Example:
+
+@EndUserText.label : 'Structure for Sales Order Pricing Details'
+@AbapCatalog.enhancementCategory : #NOT_EXTENSIBLE
+define structure ZSTR_SO_PRICE_DETAILS {
+
+  VBELN : VBELN;
+
+  POSNR : POSNR;
+
+  @Semantics.currencyCode : true
+  WAERS : WAERS;
+
+  @Semantics.amount.currencyCode : 'WAERS'
+  NETWR : CURR15_2;
+
+  @Semantics.amount.currencyCode : 'WAERS'
+  GROSSWR : CURR15_2;
+
+  @Semantics.quantity.unitOfMeasure : 'MEINS'
+  KWMENG : QUAN13_3;
+
+  @Semantics.unitOfMeasure : true
+  MEINS : MEINS;
+}

@@ -1,0 +1,68 @@
+# 1. GENERAL ABAP CLASS DESIGN GUIDELINES
+
+- Global class names follow the pattern `ZCL_<FUNCTION>_<PURPOSE>`.
+- The class must be defined in two parts:
+  1. `CLASS <name> DEFINITION PUBLIC CREATE PUBLIC.`
+  2. `CLASS <name> IMPLEMENTATION.`
+- Use three visibility sections:
+  - PUBLIC SECTION: constants, types, methods exposed for use.
+  - PROTECTED SECTION: internal helper methods for subclasses.
+  - PRIVATE SECTION: internal data attributes and logic.
+- Always end with `ENDCLASS.` after both definition and implementation.
+
+# 2. NAMING CONVENTIONS
+
+| Object Type | Prefix Example | Description |
+|--------------|----------------|-------------|
+| Class | `ZCL_` | Global class |
+| Interface | `ZIF_` | Interface definition |
+| Local variable | `lv_` | Scalar variable |
+| Structure variable | `ls_` | Structure variable |
+| Internal table | `lt_` | Table variable |
+| Constant | `gc_` | Global constant |
+| Method parameter | `iv_`, `ev_`, `ct_` | Importing, Exporting, Changing tables |
+
+# 3. COMMON ABAP CLASS STRUCTURE
+
+CLASS zcl_example_handler DEFINITION PUBLIC CREATE PUBLIC.
+PUBLIC SECTION.
+METHODS: constructor,
+execute IMPORTING iv_input TYPE string RETURNING VALUE(rv_output) TYPE string.
+PRIVATE SECTION.
+DATA: mv_data TYPE string.
+ENDCLASS.
+
+CLASS zcl_example_handler IMPLEMENTATION.
+METHOD constructor.
+mv_data = ''.
+ENDMETHOD.
+
+METHOD execute.
+CONCATENATE 'Processed:' iv_input INTO rv_output SEPARATED BY space.
+ENDMETHOD.
+ENDCLASS.
+
+# 4. DOCUMENTATION AND COMMENTS
+
+- Add a short class-level comment describing overall functionality.
+- Add method-level comments describing purpose and parameters.
+- Use `*` comment lines above method definitions.
+- Example:
+----------------------------------------------------------------------
+
+CLASS: ZCL_PO_CLOSE_HANDLER
+
+PURPOSE: Handles logic to identify, close, and log purchase orders.
+----------------------------------------------------------------------
+# 5. BEST PRACTICES
+
+- Keep logic modular — one method per logical task.
+- Use exception classes for error handling instead of hard-coded messages.
+- Avoid WRITE statements in global classes — return data or raise exceptions.
+- For class constructors:
+- Initialize key attributes.
+- Avoid DB access — use setup methods for that.
+- For each method:
+- Provide clear IMPORTING and RETURNING parameters.
+- Always type parameters (avoid TYPE ANY).
+- Return success/error indicators via RETURNING or EXPORTING params.

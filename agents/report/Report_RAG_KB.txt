@@ -1,0 +1,65 @@
+====================================================
+SAP ABAP RAG KNOWLEDGE BASE FOR CODE GENERATION
+====================================================
+PURPOSE:
+This knowledge base helps an AI agent write correct, readable, and production-quality ABAP code based on textual requirements.  
+The following sections contain reusable guidelines, templates, and rules for report programs, ALV outputs, modularization, naming conventions, and data operations.
+
+# 1. GENERAL ABAP STANDARDS
+- Always use modern ABAP syntax (7.4+).
+- Use `DATA(...)` inline declarations instead of `DATA:` blocks.
+- Use `SELECT INTO TABLE @DATA(...)` with `@` escaping.
+- Avoid `SELECT *`; always specify fields.
+- Use meaningful variable names with prefixes:
+  - lv_ → Local variable
+  - ls_ → Structure
+  - lt_ → Internal table
+  - lv_text → Text variable
+  - lv_flag → Boolean flag
+- Add comments before every major logic block.
+- Align keywords and indentation for readability.
+- Use `CLEAR`, `REFRESH`, and `FREE` properly to manage memory.
+
+# 2. STRUCTURE & INTERNAL TABLE GUIDELINES
+- When defining a custom structure, prefix with `ZSTR_` or `YSTR_`.
+- For internal tables, use `TYPE STANDARD TABLE OF` and create a work area.
+
+# 3. SELECT STATEMENTS & DATABASE ACCESS
+- Use `SELECT ... INTO TABLE @DATA(...)` for table fetching.
+- Always include `WHERE` clauses to limit records.
+- Use `ORDER BY PRIMARY KEY` when logical ordering is needed.
+- Handle `sy-subrc` after every `SELECT`, `MODIFY`, or `DELETE`.
+
+# 4. MODULARIZATION & SUBROUTINES
+- Always prefer Local class creation instead of Form Routines 
+- If not class, then use PERFORM routines for modularization in report programs.
+- Each routine should perform one clear function.
+
+# 5. ALV (ABAP LIST VIEWER) OUTPUT
+- Always use `CL_SALV_TABLE` for ALV reports.
+- Set field catalog and titles properly.
+
+# 6. MESSAGES & USER INTERACTION
+- Use `MESSAGE` statements for user output.
+- Use proper message types:
+- I → Information
+- W → Warning
+- E → Error (terminates)
+
+# 7. INCLUDE PROGRAMS
+- Use INCLUDE programs to modularize large report programs into logical components.
+- Each INCLUDE should have a clear purpose and naming convention using the main report name as a prefix.
+
+- Always put data declarations in Z*_TOP include.
+- Selection screen elements in Z*_SEL include.
+- Form Routines in Z*_F01 include.
+- And respectively as mentioned 
+- If mentioned create Include programs.
+
+For a report named `ZREPORT_PO_STATUS`, the standard INCLUDE names are:
+
+  INCLUDE zreport_po_status_top.   " Global data declarations
+  INCLUDE zreport_po_status_sel.   " Selection-screen elements
+  INCLUDE zreport_po_status_f01.   " Subroutines (FORM routines)
+  INCLUDE zreport_po_status_o01.   " Event blocks (optional)
+  INCLUDE zreport_po_status_i01.   " Internal logic (optional)

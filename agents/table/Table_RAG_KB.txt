@@ -1,0 +1,198 @@
+# 1. OVERVIEW
+
+ABAP transparent tables are persistent database tables defined in the Data Dictionary (DDIC).
+They store data physically in the database and are the foundation of most SAP applications.
+
+Each transparent table must have:
+- A technical name (starting with Z for custom).
+- A primary key.
+- At least one data field and a delivery class.
+- Optional foreign key relationships and annotations.
+
+# 2. TABLE NAMING CONVENTIONS
+If table name not provided in document then,
+
+| Element | Convention | Example |
+|----------|-------------|----------|
+| Table Name | Starts with ZTB_ | ZTB_SALES_HDR |
+| Key Fields | Usually IDs or Numbers | MANDT, DOC_NO, ITEM_NO |
+| Data Fields | Meaningful business names | MATNR, LIFNR, AMOUNT |
+| Include Structure | Use INCLUDE STRUCTURE ZINC_… | INCLUDE STRUCTURE ZINC_AUDIT_FIELDS |
+| Append Structure | APPEND STRUCTURE ZAPP_… | APPEND STRUCTURE ZAPP_EKKO_EXT |
+
+# 3. TABLE CREATION RULES
+
+- Always include client field (MANDT) if the table is client-dependent.  
+  → **MANDT must always have a foreign key relationship to T000 (Client Table).**
+- Use @EndUserText.label annotation for the table.
+- Use @AbapCatalog.enhancementCategory to define extensibility:
+  - `#NOT_EXTENSIBLE` — no extensions allowed.
+  - `#EXTENSIBLE_UNDERLYING` — allow append structures.
+- Use standard data elements (like EBELN, MATNR, AEDAT) wherever possible.
+- Maintain a primary key (single or composite).
+- Avoid duplicate field names.
+- Define clear foreign key relationships if applicable.
+- Align field order logically — keys first, then data fields, then audit fields.
+
+# 4. BASIC TABLE TEMPLATE
+@EndUserText.label : 'Table for Purchase Order Closure'
+@AbapCatalog.enhancementCategory : #NOT_EXTENSIBLE
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.tableCategory : #TRANSPARENT
+define table ZTB_PO_CLOSE {
+
+  @AbapCatalog.foreignKey.keyType : #PRIMARY_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key MANDT : MANDT not null
+    with foreign key[1..*,1] T000
+      where MANDT = ekko.MANDT;
+
+  key EBELN : EBELN not null;
+
+  key EBELP : EBELP not null;
+
+  MATNR : MATNR;
+
+  LIFNR : LIFNR;
+
+  MENGE : MENGE_D;
+
+  WEMNG : MENGE_D;
+
+  OPEN_QTY : MENGE_D;
+
+  AEDAT : AEDAT;
+
+  INCLUDE STRUCTURE ZINC_AUDIT_FIELDS;
+}
+
+# 5. TABLE EXTENSION EXAMPLE (APPEND STRUCTURE)
+@EndUserText.label : 'Append Structure for Custom Fields in Purchase Order Table'
+@AbapCatalog.enhancementCategory : #EXTENSIBLE_UNDERLYING
+append structure ZAPP_PO_ADD_FIELDS to ZTB_PO_CLOSE {
+
+  ZZREF_NUM : CHAR20;
+
+  ZZPROJ_CODE : CHAR10;
+}
+
+# 6. FIELD NAMING & DATA ELEMENT RULES
+
+| Field Type | Example | Recommendation |
+|-------------|----------|----------------|
+| Client Field | MANDT | Always first if client-dependent |
+| Key Field | DOC_NO, ITEM_NO | Always in uppercase |
+| Quantity / Amount | MENGE, WRBTR | Use existing standard elements |
+| Text Field | DESCRIPTION, ZZNOTE | Use CHAR or STRING |
+| Date / Time | ERDAT, AEDAT, ERZET | Use standard elements |
+| Boolean / Flag | ACTIVE, FLAG_CLOSE | Type CHAR1 |
+
+# 7. NAMING BEST PRACTICES
+- Prefix with module or purpose: `ZTB_SALES_HDR`, `ZTB_PO_ITEM`, `ZTB_AUDIT_LOG`
+- Limit total name length ≤ 30 characters.
+- Avoid special characters or reserved words.
+- Use suffix `_HDR` or `_ITM` for clarity.
+
+# 8. FOREIGN KEY RELATIONSHIPS
+
+Foreign keys link table fields to other DDIC tables, ensuring data consistency.
+They should be defined using `with foreign key` in the DDL definition.
+
+## Example: Foreign Key to MARA (Material Master)
+
+@EndUserText.label : 'Table for Material Tracking'
+@AbapCatalog.enhancementCategory : #NOT_EXTENSIBLE
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.tableCategory : #TRANSPARENT
+define table ZTB_MAT_TRACK {
+
+  @AbapCatalog.foreignKey.keyType : #PRIMARY_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key MANDT : MANDT not null
+    with foreign key[1..*,1] T000
+      where MANDT = ekko.MANDT;
+
+  key MATNR : MATNR not null
+    with foreign key MARA
+      where MATNR = MATNR;
+
+  key WERKS : WERKS_D not null
+    with foreign key T001W
+      where WERKS = WERKS;
+
+  @AbapCatalog.foreignKey.keyType : #NON_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  extend bukrs:
+  with foreign key[1..*,1]T001
+  where mandt = ekko.mandt
+        bukrs = ekko.bukrs;
+
+  TRACK_QTY : MENGE_D;
+
+  AEDAT : AEDAT;
+}
+
+## Guidelines:
+- Always create foreign key relationships for key business fields (e.g., MATNR → MARA, LIFNR → LFA1, WERKS → T001W).
+- Each foreign key should specify `where <foreign_field> = <local_field>`.
+- Foreign keys improve referential integrity and enable value help in UI.
+- Use `@AbapCatalog.foreignKey.keyType : #FOREIGN_KEY` for non-key relationships.
+- Avoid cyclic foreign key dependencies.
+- **MANDT** must always reference table **T000** with the condition `CLIENT = MANDT`.
+
+# 9. ANNOTATIONS CHEATSHEET
+
+| Annotation | Description |
+|-------------|--------------|
+| @EndUserText.label | Adds descriptive label for UI and DDIC |
+| @AbapCatalog.enhancementCategory | Defines extensibility type |
+| @AbapCatalog.deliveryClass | Controls transport and client behavior |
+| @AbapCatalog.tableCategory | Defines physical table type (#TRANSPARENT) |
+| @AbapCatalog.foreignKey.keyType | Defines foreign key relationship type |
+
+# 10. SAMPLE TABLE VARIANTS
+
+## (a) Header Table Example
+@EndUserText.label : 'Sales Header Table'
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+define table ZTB_SALES_HDR {
+
+  @AbapCatalog.foreignKey.keyType : #PRIMARY_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key MANDT : MANDT not null
+    with foreign key[1..*,1] T000
+      where MANDT = ekko.MANDT;
+
+  key VBELN : VBELN not null;
+
+  KUNNR : KUNNR;
+  VKORG : VKORG;
+  ERDAT : ERDAT;
+  ERNAM : ERNAM;
+}
+
+## (b) Item Table Example
+@EndUserText.label : 'Sales Item Table'
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+define table ZTB_SALES_ITM {
+
+  @AbapCatalog.foreignKey.keyType : #PRIMARY_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key MANDT : MANDT not null
+    with foreign key[1..*,1] T000
+      where MANDT = ekko.MANDT;
+  
+  @AbapCatalog.foreignKey.keyType : #PRIMARY_KEY
+  @AbapCatalog.foreignKey.screenCheck : true
+  key VBELN : VBELN not null
+    with foreign key[1..*,1] ZTB_SALES_HDR 
+    where VBELN = VBELN;
+
+  key POSNR : POSNR not null;
+
+  MATNR : MATNR;
+  MENGE : MENGE_D;
+  NETWR : WRBTR;
+}
